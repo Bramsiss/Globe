@@ -5,7 +5,7 @@
     <title>Globe</title>
     
     <link rel="stylesheet" href="style.css">
-    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/d3.v4.min.js"></script>
     <script src="https://d3js.org/topojson.v1.min.js"></script>
     <style type="text/css">
       body {
@@ -76,14 +76,15 @@
 </html>
 <script type="text/javascript">
 
-  // Information : http://bl.ocks.org/patricksurry/5721459
+  // Information : в
 
   var width = 1000,
+    radius = 425,
     height = 1000;
 
   var projection = d3.geo.orthographic()
-    .scale(425)
-    .translate([width / 2, height / 2])
+    .scale(radius)
+    .translate([radius, radius])
     .clipAngle(180)
     .precision(.1)
     .rotate([300,-10,0]);
@@ -106,9 +107,9 @@
     .attr("d", path);
 
     svg.append("circle")
-    .attr("cx", 500)
-    .attr("cy", 500 )
-    .attr("r", 425)
+    .attr("cx", radius)
+    .attr("cy", radius )
+    .attr("r", radius)
     .style("fill", "none")
     .style("stroke", "black");
 
@@ -121,7 +122,6 @@
       .attr("id", function(d) {return d.id;});
       
     d3.tsv("https://rawgit.com/Bramsiss/Globe/master/temp.tsv", function(data) {
-      // 60 is the number of class in temperature.css
       var quantile = d3.scale.quantile().domain([
         d3.min(data, function(e) { return +e.temperature; }),
         d3.max(data, function(e) { return +e.temperature; })])

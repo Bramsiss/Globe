@@ -30,11 +30,18 @@
       .graticule {
         fill: none;
         stroke: black;
-        stroke-width: .5px;
-        stroke-opacity: .5;
+        stroke-width: .3px;
+        stroke-opacity: 0;
+      }
+      .foreground {
+        fill: transparent;
+        stroke: rgba(0, 0, 0, 1); 
+        stroke-width: 1px;
       }
       .country {
-        fill: transparent;  stroke: rgba(0, 0, 0, .5); stroke-width: 0,2;
+        fill: transparent;  
+        stroke: rgba(0, 0, 0, 1); 
+        stroke-width: 0px;
       }
       
       .axis {
@@ -76,32 +83,36 @@
 </html>
 <script type="text/javascript">
 
-  // Information : в
+var timer;
+var width = 1000,
+height = 700,
+radius = 325,
+margin = { top: 30, right: 30, bottom: 30, left: 30 },
+originalScale = height / 2.1,
+scale = originalScale,
+translation = [width / 2, height / 2],
+scaleChange, rotation,
+rotate = [10, -1],
+velocity = [.009,0],
+time = Date.now();
 
-  var width = 1000,
-    radius = 425,
-    height = 1000;
-
-  var projection = d3.geoOrthographic()
+var projection = d3.geoOrthographic()
     .scale(radius)
     .translate([radius, radius])
     .clipAngle(180)
     .precision(.1)
-    .rotate([300,-10,0]);
+    .rotate([320,-10,0]);
+var sphere = {type: 'Sphere'};
 
-
-  var path = d3.geoPath()
-    .projection(projection);
 
   var graticule = d3.geoGraticule();
 
-  var svg = d3.select("#map").append("svg")
-    .attr("id", "world")
-    .attr("width", width)
-    .attr("height", height);
+var svg = d3.select('#map').append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform', 'translate(' + margin.top + ', ' + margin.left + ')');
 
-  // Append all meridians and parallels
-  svg.append("path")
+
+    var path = d3.geoPath()
+    .projection(projection);
+    svg.append("path")
     .datum(graticule)
     .attr("class", "graticule")
     .attr("d", path);
@@ -113,14 +124,35 @@
     .style("fill", "none")
     .style("stroke", "black");
 
-  d3.json("https://rawgit.com/Bramsiss/Globe/master/world-counries.json", function(collection) {
-    var countries = svg.selectAll("path")
-      .data(collection.features)
-      .enter().append("path")
-      .attr("d", path)
-      .attr("class", "country")
-      .attr("id", function(d) {return d.id;});
-      
+
+
+
+//*/
+
+
+
+//Континенты
+d3.json("https://unpkg.com/world-atlas@1.1.4/world/110m.json", function(error, topo) {
+  if (error) throw error;
+
+  var land = topojson.feature(topo, topo.objects.land),
+      grid = graticule();
+    //  console.log(land)
+    //  console.log(grid)
+    /*
+    projection.clipAngle(180);
+    svg.selectAll("path.background").data([land]).enter().append("path").attr("class", "background").attr("d", path).style("fill", "lightgray").style("stroke", "gray").style("stroke-width", "1px");
+    /*svg.selectAll("path.gridbg").data([grid]).enter().append("path").attr("class", "gridbg").attr("d", path).style("fill", "none").style("stroke", "darkgrey").style("stroke-width", "12px");*/
+    svg.selectAll("path.foreground").data([land]).enter().append("path").attr("class", "foreground").attr("d", path);
+    /*svg.selectAll("path.gridfg").data([grid]).enter().append("path").attr("class", "gridfg").attr("d", path).style("fill", "none").style("stroke", "darkgreen").style("stroke-width", "0px");
+    */
+
+
+//Cтраны
+d3.json("https://rawgit.com/Bramsiss/Globe/master/world-counries.json", function(collection) {
+    var countries = svg.selectAll(".country").data(collection.features).enter().append("path").attr("d", path).attr("class", "country");
+      //.attr("id", function(d) {return d.id;});
+
     d3.tsv("https://rawgit.com/Bramsiss/Globe/master/temp.tsv", function(data) {
       var quantile = d3.scaleQuantile().domain([
         d3.min(data, function(e) { return +e.temperature; }),
@@ -147,15 +179,23 @@
           );
       });
     });
-  });
-  
-  var λ = d3.scaleLinear()
-    .domain([0, width])
-    .range([-180, 180]);
 
-    var φ = d3.scaleLinear()
-    .domain([0, height])
-    .range([90, -90]);
+//Rotation
+  var feature = svg.selectAll(".foreground, .country, .graticule");
+
+  timer = d3.timer(function() {
+  var dt = Date.now() - time;
+  projection.rotate([rotate[0] + velocity[0] * dt, 0]);
+  feature.attr("d", path);
+});
+
+  });
+
+
+
+ // //Drag
+    var λ = d3.scaleLinear().domain([0, width]).range([-180, 180]);
+    var φ = d3.scaleLinear().domain([0, height]).range([90, -90]);
 
     var drag = d3.drag().subject(function() {
         var r = projection.rotate();
@@ -163,15 +203,23 @@
       x: λ.invert(r[0]),
       y: φ.invert(r[1])
     };
-  }).on("drag", function() {
-    projection.rotate([λ(d3.event.x), φ(d3.event.y)]);
-    svg.selectAll(".country").attr("d", path);
-    
-    svg.selectAll(".graticule")
-      .datum(graticule)
-      .attr("d", path);
-  });
-  
-  svg.call(drag);
 
+
+  }).on("drag", function() {
+
+
+    stopGlobe();
+    projection.rotate([λ(d3.event.x), φ(d3.event.y)]);
+    svg.selectAll(".foreground, .country, .graticule").attr("d", path);    
+  });   
+  svg.call(drag);
+    function stopGlobe() { 
+    console.log(timer) ;
+    timer.stop();
+}
+
+});
 </script>
+
+
+
